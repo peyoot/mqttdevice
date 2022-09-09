@@ -3,7 +3,7 @@ from random import randrange,uniform
 import time
 import ssl
 
-AWSIOT_ENABLE = True
+AWSIOT_ENABLE = false
 #change linux to a specific device ID like ix15 or cc6ulsbc-1, or device ID
 MQTT_SUBTOPIC="iotdevice/linux/cli"
 clientID = "iotdevice-linux"
@@ -26,6 +26,8 @@ aws_key="./aws_certs/17f000a56e4ecf9510dd5d5fa153ca8877d8f727865e2bf7b01722827cf
 
 #callback define
 def on_connect(mosq, obj, rc):
+    print("connecting to broker "+str(broker)+":"+str(port))
+    print("cacert =",rootCA)
     mqttc.subscribe(MQTT_SUBTOPIC, 0)
 
 def on_message(mosq, obj, msg):
@@ -35,7 +37,7 @@ def on_message(mosq, obj, msg):
 
 def on_subscribe(mosq, obj, mid, granted_qos):
     print("Subscribed to Topic: " + 
-	MQTT_MSG + " with QoS: " + str(granted_qos))
+	MQTT_SUBTOPIC + " with QoS: " + str(granted_qos))
 
 #prepare data
 #data can either comes from true sensor, or just a random fake one

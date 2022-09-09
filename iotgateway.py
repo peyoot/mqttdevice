@@ -2,11 +2,23 @@ from http import client
 import paho.mqtt.client as mqtt
 import time
 import threading
+import ssl
 import logging
 #import thingsboard_objects as Things
 import random
 import datetime
 logging.basicConfig(level=logging.INFO)
+
+# Certs define
+AWS_ROOTCA = "./aws_certs/AmazonRootCA1.pem"
+AWS_CERT = "./aws_certs/17f000a56e4ecf9510dd5d5fa153ca8877d8f727865e2bf7b01722827cf47b04-certificate.pem.crt"
+AWS_KEY = "./aws_certs/17f000a56e4ecf9510dd5d5fa153ca8877d8f727865e2bf7b01722827cf47b04-private.pem.key"
+AWS_ENDPOINT = "a1nl1xxmre4mok.ats.iot.cn-north-1.amazonaws.com.cn"
+
+MY_CA = "./certs/ca.crt"
+MY_CERT = "./certs/client1.crt"
+MY_KEY = "./certs/client1.key"
+MY_BROKER = "52.80.119.72"
 
 #define end device that will managed by gateway
 my_devices = [{"name": "deivce1", "deviceid": "0001", "sub_topic": "topic1"},{"name": "deivce2", "deviceid": "0002", "sub_topic": "topic2"}]
@@ -15,18 +27,22 @@ my_devices = [{"name": "deivce1", "deviceid": "0001", "sub_topic": "topic1"},{"n
 init_time = time.time()
 
 
-def Connect(client, broker, port, keepalive, run_forever=False):
+def Connect(client, broker, port, cacert, certfile, keyfile, keepalive, run_forever=False):
     connflag = False
     delay = 5
     print("connecting ",client)
     badcount = 0  # counter for bad connection attempts
     while not connflag:
         print(logging.info("connecting to broker " + str(broker)))
-        # print("connecting to broker "+str(broker)+":"+str(port))
+        #print("connecting to broker "+str(broker)+":"+str(port))
+        #print("cacert =",cacert)
+        #print("certfile = ",certfile)
         print("Attempts ", str(badcount))
         time.sleep(2)
         try:
             #client.username_pw_set(token)
+            #client.tls_set(ca_certs=aws_rootCA, certfile=aws_cert, keyfile=aws_key, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
+            client.tls_set(ca_certs=cacert, certfile=certfile, keyfile=keyfile, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
             client.connect(broker, port, keepalive)
             connflag = True
 
@@ -79,7 +95,7 @@ seconds.Returns True if succesful False if fails"""
     return True
 
 
-def client_loop(client, broker, port, keepalive=300, loop_function=None,
+def client_loop(client, broker, port, cacert, certfile, keyfile, keepalive=300, loop_function=None,
                 loop_delay=10, run_forever=False):
     """runs a loop that will auto reconnect and subscribe to topics
     pass topics as a list of tuples. You can pass a function to be
@@ -96,7 +112,7 @@ def client_loop(client, broker, port, keepalive=300, loop_function=None,
             break
         if not client.connected_flag:
             print("Connecting to " + broker)
-            if Connect(client, broker, port, keepalive, run_forever) != -1:
+            if Connect(client, broker, port, cacert, certfile, keyfile, keepalive, run_forever) != -1:
                 if not wait_for(client, "CONNACK"):
                     client.run_flag = False  # break no connack
             else:  # connect fails
@@ -189,32 +205,41 @@ def Create_connections():
         #clients[i]["index"] = i
         broker = clients[i]["broker"]
         port = clients[i]["port"]
+        cacert = clients[i]["cacert"]
+        certfile = clients[i]["certfile"]
+        keyfile = clients[i]["keyfile"]
         #token = clients[i]["token"]
         client.on_connect = on_connect
         client.on_disconnect = on_disconnect
         client.on_publish = on_publish
         #client.on_message = on_message
-        t = threading.Thread(target=client_loop, args=(client, broker, port, 300, pub))
+        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, 300, pub))
         threads.append(t)
         t.start()
 
 
 if __name__ == '__main__':
 
-    things_location = input("What platform are you working with (awsiot/mosquitto)? ")
+    things_location = input("What MQTT broker platform are you working with (awsiot/mosquitto)? ")
 
     if things_location == "awsiot":
         #type_install = 'thingboard.demo:8080'
-        broker = 'a1nl1xxmre4mok.ats.iot.cn-north-1.amazonaws.com.cn'
+        broker = AWS_ENDPOINT
+        cacert = AWS_ROOTCA
+        certfile = AWS_CERT
+        keyfile = AWS_KEY
     else:
-        type_install = broker = '52.80.119.72'
-
-    #header = Things.get_credentials(things_location)
-     #clients[index] will append name and topicy, so we can only define topic in my_devices
+        broker = MY_BROKER
+        cacert = MY_CA
+        certfile = MY_CERT
+        keyfile = MY_KEY
+ 
+    #clients[index] will append name and topic, so we can only define topic in my_devices
     #index start from 0
     clients = []
     for device in my_devices:
-        device_info = {"broker": broker, "port": 1883, "name": device["name"], "deviceid": device["deviceid"], "sub_topic": device["sub_topic"]}
+    #    device_info = {"broker": broker, "port": 1883, "name": device["name"], "deviceid": device["deviceid"], "sub_topic": device["sub_topic"]}
+        device_info = {"broker": broker, "port": 8883, "cacert": cacert, "certfile": certfile, "keyfile": keyfile, "name": device["name"], "deviceid": device["deviceid"], "sub_topic": device["sub_topic"]}
         clients.append(device_info)
 
     n_clients = len(clients)
