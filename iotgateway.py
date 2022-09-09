@@ -95,7 +95,7 @@ seconds.Returns True if succesful False if fails"""
     return True
 
 
-def client_loop(client, broker, port, cacert, certfile, keyfile, keepalive=300, loop_function=None,
+def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, keepalive=300, loop_function=None,
                 loop_delay=10, run_forever=False):
     """runs a loop that will auto reconnect and subscribe to topics
     pass topics as a list of tuples. You can pass a function to be
@@ -103,7 +103,9 @@ def client_loop(client, broker, port, cacert, certfile, keyfile, keepalive=300, 
     """
     client.run_flag = True
     client.broker = broker
+    
     print("running loop ")
+    print("device id is ", deviceid)
     client.reconnect_delay_set(min_delay=1, max_delay=12)
 
     while client.run_flag:  # loop forever
@@ -163,6 +165,7 @@ def on_disconnect(client, userdata, rc):
 
 def on_publish(client, userdata, mid):
     print("In on_pub callback mid= ", mid)
+    print("client is", client)
 
 
 def pub(client, loop_delay):
@@ -208,12 +211,13 @@ def Create_connections():
         cacert = clients[i]["cacert"]
         certfile = clients[i]["certfile"]
         keyfile = clients[i]["keyfile"]
+        deviceid = clients[i]["deviceid"]
         #token = clients[i]["token"]
         client.on_connect = on_connect
         client.on_disconnect = on_disconnect
         client.on_publish = on_publish
         #client.on_message = on_message
-        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, 300, pub))
+        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, deviceid, 300, pub))
         threads.append(t)
         t.start()
 
