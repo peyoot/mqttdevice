@@ -32,9 +32,9 @@ my_devices = [{"name": "deivce1", "deviceid": "0001", "type": "type1"},{"name": 
 init_time = time.time()
 
 
-def Connect(client, broker, port, cacert, certfile, keyfile, device_type, keepalive, run_forever=False):
+def Connect(client, broker, port, cacert, certfile, keyfile, keepalive, run_forever=False):
     connflag = False
-    delay = 5
+    #delay = 5
     print("connecting ",client)
     badcount = 0  # counter for bad connection attempts
     while not connflag:
@@ -119,7 +119,7 @@ def client_loop(client, broker, port, cacert, certfile, keyfile, device_type, de
             break
         if not client.connected_flag:
             print("Connecting to " + broker)
-            if Connect(client, broker, port, cacert, certfile, keyfile, device_type, keepalive, run_forever) != -1:
+            if Connect(client, broker, port, cacert, certfile, keyfile, keepalive, run_forever) != -1:
                 if not wait_for(client, "CONNACK"):
                     client.run_flag = False  # break no connack
             else:  # connect fails
