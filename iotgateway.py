@@ -9,6 +9,9 @@ import random
 import datetime
 logging.basicConfig(level=logging.INFO)
 
+#define iotgateway itself as group name
+groupid="iotgateway1"
+
 # Certs define
 AWS_ROOTCA = "./aws_certs/AmazonRootCA1.pem"
 AWS_CERT = "./aws_certs/17f000a56e4ecf9510dd5d5fa153ca8877d8f727865e2bf7b01722827cf47b04-certificate.pem.crt"
@@ -95,7 +98,7 @@ seconds.Returns True if succesful False if fails"""
     return True
 
 
-def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, keepalive=300, loop_function=None,
+def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, loop_function=None, keepalive=300,
                 loop_delay=10, run_forever=False):
     """runs a loop that will auto reconnect and subscribe to topics
     pass topics as a list of tuples. You can pass a function to be
@@ -124,7 +127,7 @@ def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, keepa
         client.loop(0.01)
 
         if client.connected_flag and loop_function:  # function to call
-            loop_function(client, loop_delay)  # call function
+            loop_function(client, deviceid, loop_delay)  # call function
 
     time.sleep(1)
     print("disconnecting from", broker)
@@ -168,7 +171,14 @@ def on_publish(client, userdata, mid):
     print("client is", client)
 
 
-def pub(client, loop_delay):
+def pub(client, deviceid, loop_delay):
+    if deviceid == "0001":
+        print("0001 device matched, you can put function here")
+        pub_topic = "demo/"+groupid+deviceid
+    
+    if deviceid == "0002":
+        print("0002 device matched, you can put function here")
+        pub_topic = "demo/"+groupid+deviceid
 
     rmd_current = round(random.uniform(0.6, 50.0), 2)
     rmd_pressure = round(random.uniform(0.6, 50.0), 2)
@@ -179,18 +189,16 @@ def pub(client, loop_delay):
         rmd_mnp = round(random.uniform(5.0, 30.0), 2)
         rmd_sdp = round(random.random(), 2)
 
-        client.publish('v1/devices/me/telemetry',
-                       '{"Current": "%s","Pressure": "%s","Str": "12341","Stp": "12340","AL1": "~","AL2": "~",'
-                       '"AL3": "~","AL4": "~","AL5": "~","AL6": "~","AL7": "~","AL8": "~"}' % (rmd_current, rmd_pressure))
-        client.publish('v1/devices/me/telemetry',
-                       '{"MnC": "%s", "SdC": "%s", "Str": "2554","Stp": "2554", '
-                       '"MnP": "%s", "SdP": "%s"}' % (rmd_mnc, rmd_sdc, rmd_mnp, rmd_sdp))
-
+        client.publish(pub_topic,
+                       '{"Current": "%s","Pressure": "%s","Str": "12341","Stp": "12340"}' % (rmd_current, rmd_pressure))
+        client.publish(pub_topic,
+                       '{"MnC": "%s", "SdC": "%s", "Str": "2554","Stp": "2554","MnP": "%s", "SdP": "%s"}' % (rmd_mnc, rmd_sdc, rmd_mnp, rmd_sdp))
+        print("one hour reached, publish to %s done!" % pub_topic)
         init_time = time.time()
     else:
-        client.publish('v1/devices/me/telemetry',
-                       '{"Current": "%s","Pressure": "%s","Str": "12341","Stp": "12340","AL1": "~","AL2": "~",'
-                       '"AL3": "~","AL4": "~","AL5": "~","AL6": "~","AL7": "~","AL8": "~"}' % (rmd_current, rmd_pressure))
+        client.publish(pub_topic, 
+                       '{"Current": "%s","Pressure": "%s"}' % (rmd_current, rmd_pressure))
+        print("publish to %s done!" % pub_topic)
     print(datetime.datetime.now())
     time.sleep(loop_delay)
     pass
@@ -217,7 +225,7 @@ def Create_connections():
         client.on_disconnect = on_disconnect
         client.on_publish = on_publish
         #client.on_message = on_message
-        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, deviceid, 300, pub))
+        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, deviceid, pub, 300))
         threads.append(t)
         t.start()
 

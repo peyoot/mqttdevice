@@ -3,7 +3,7 @@ from random import randrange,uniform
 import time
 import ssl
 
-AWSIOT_ENABLE = false
+AWSIOT_ENABLE = False
 #change linux to a specific device ID like ix15 or cc6ulsbc-1, or device ID
 MQTT_SUBTOPIC="iotdevice/linux/cli"
 clientID = "iotdevice-linux"
@@ -61,6 +61,10 @@ mqtt_client.on_subscribe = on_subscribe
 ##mqtt_client.tls_set("certs/ca.crt","certs/client1.crt","certs/client1.key")
 mqtt_client.tls_set(ca_certs=rootCA, certfile=cert, keyfile=key, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
 mqtt_client.connect(broker, port=mqtt_port, keepalive=60)
+#mqtt_client.loop_start()
+time.sleep(20)
+mqtt_client.loop_stop()
+print("quitting mqtt connection")
 # Continue monitoring the incoming messages for subscribed topic
 #mqtt_client.loop_forever()
 
