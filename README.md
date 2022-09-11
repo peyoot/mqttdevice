@@ -1,6 +1,10 @@
 #### discription
 mqttdevice is a demo client device to publish & subscribe topics to a MQTT server like mosquitto or AWSIOT. This is part of awsiot demo.
 
+for testing message from web app, please use mqtt client to publish to demo/app/gateway1/#
+
+for testing publishing message, please use mqtt client subscribe to demo/gateway1/#
+
 #### folder structure
 ```
 /

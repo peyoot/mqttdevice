@@ -11,6 +11,8 @@ logging.basicConfig(level=logging.INFO)
 
 #define iotgateway itself as group name
 groupid="iotgateway1"
+#in case threads goes too many, put forward exception
+too_many_threads = 10
 
 # Certs define
 AWS_ROOTCA = "./aws_certs/AmazonRootCA1.pem"
@@ -98,7 +100,7 @@ seconds.Returns True if succesful False if fails"""
     return True
 
 
-def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, device_type, loop_function=None, keepalive=300,
+def client_loop(client, broker, port, cacert, certfile, keyfile, device_type, deviceid, loop_function=None, keepalive=300,
                 loop_delay=10, run_forever=False):
     """runs a loop that will auto reconnect and subscribe to topics
     pass topics as a list of tuples. You can pass a function to be
@@ -127,7 +129,7 @@ def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, devic
         client.loop(0.01)
 
         if client.connected_flag and loop_function:  # function to call
-            loop_function(client, deviceid, loop_delay)  # call function ,ie pub
+            loop_function(client, device_type, deviceid, loop_delay)  # call function ,ie pub
 
     time.sleep(1)
     print("disconnecting from", broker)
@@ -140,9 +142,9 @@ def on_log(client, userdata, level, buf):
     print(buf)
 
 
-#def on_message(client, userdata, message):
-#    time.sleep(1)
-#    print("message received", str(message.payload.decode("utf-8")))
+def on_message(client, userdata, message):
+    #time.sleep(1)
+    print("message received", str(message.payload.decode("utf-8")))
 
 
 def on_connect(client, userdata, flags, rc):
@@ -153,7 +155,7 @@ def on_connect(client, userdata, flags, rc):
             #print("connected ok")
             if client == c["client"]:
                 if c["type"] != "":
-                    sub_topic = "demo/"+groupid+"/"+c["type"]
+                    sub_topic = "demo/app/"+groupid+"/#"
                     client.subscribe(sub_topic)
 
                     print("connected OK",c["name"],c["deviceid"],c["client_id"],"type is", c["type"], "subscribe to", sub_topic)
@@ -172,14 +174,16 @@ def on_publish(client, userdata, mid):
     print("client is", client)
 
 
-def pub(client, deviceid, loop_delay):
+def pub(client, device_type, deviceid, loop_delay):
+    # set a default pub_topic
+    pub_topic = "demo/"+groupid
     if deviceid == "0001":
         print("0001 device matched, you can put function here")
-        pub_topic = "demo/"+groupid+"/"+deviceid
+        pub_topic = "demo/"+groupid+"/"+device_type+"/"+deviceid
     
     if deviceid == "0002":
         print("0002 device matched, you can put function here")
-        pub_topic = "demo/"+groupid+deviceid
+        pub_topic = "demo/"+groupid+"/"+device_type+"/"+deviceid
 
     rmd_current = round(random.uniform(0.6, 50.0), 2)
     rmd_pressure = round(random.uniform(0.6, 50.0), 2)
@@ -226,8 +230,8 @@ def Create_connections():
         client.on_connect = on_connect
         client.on_disconnect = on_disconnect
         client.on_publish = on_publish
-        #client.on_message = on_message
-        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, deviceid, device_type, pub, 300))
+        client.on_message = on_message
+        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, device_type, deviceid, pub, 300))
         threads.append(t)
         t.start()
 
@@ -271,16 +275,21 @@ if __name__ == '__main__':
     no_threads = threading.active_count()
     print("current threads =", no_threads)
     print("starting main loop")
+    # for 2 devices, expected threads been seen is 3.
+    if no_threads > n_clients:
+        max_no_threads = True
+    
     try:
-        while no_threads == 3:
+        while max_no_threads == True:           
             time.sleep(10)
             no_threads = threading.active_count()
-            print("current threads =", no_threads)
+            print("current threads now reach: ", no_threads)
+            assert no_threads < too_many_threads
             for c in clients:
                 if not c["client"].connected_flag:
                     print("broker ", c["broker"], " is disconnected")
 
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt,AssertionError):
         print("ending")
         for c in clients:
             c["client"].run_flag = False
