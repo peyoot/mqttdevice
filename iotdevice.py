@@ -26,7 +26,7 @@ aws_key="./aws_certs/17f000a56e4ecf9510dd5d5fa153ca8877d8f727865e2bf7b01722827cf
 
 #callback define
 def on_connect(mosq, obj, rc):
-    print("connecting to broker "+str(broker)+":"+str(port))
+    print("connecting to broker "+str(broker)+":"+str(mqtt_port))
     print("cacert =",rootCA)
     mqttc.subscribe(MQTT_SUBTOPIC, 0)
 

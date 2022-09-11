@@ -24,13 +24,13 @@ MY_KEY = "./certs/client1.key"
 MY_BROKER = "52.80.119.72"
 
 #define end device that will managed by gateway
-my_devices = [{"name": "deivce1", "deviceid": "0001", "sub_topic": "topic1"},{"name": "deivce2", "deviceid": "0002", "sub_topic": "topic2"}]
+my_devices = [{"name": "deivce1", "deviceid": "0001", "type": "type1"},{"name": "deivce2", "deviceid": "0002", "type": "type2"}]
   
 
 init_time = time.time()
 
 
-def Connect(client, broker, port, cacert, certfile, keyfile, keepalive, run_forever=False):
+def Connect(client, broker, port, cacert, certfile, keyfile, device_type, keepalive, run_forever=False):
     connflag = False
     delay = 5
     print("connecting ",client)
@@ -98,7 +98,7 @@ seconds.Returns True if succesful False if fails"""
     return True
 
 
-def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, loop_function=None, keepalive=300,
+def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, device_type, loop_function=None, keepalive=300,
                 loop_delay=10, run_forever=False):
     """runs a loop that will auto reconnect and subscribe to topics
     pass topics as a list of tuples. You can pass a function to be
@@ -117,7 +117,7 @@ def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, loop_
             break
         if not client.connected_flag:
             print("Connecting to " + broker)
-            if Connect(client, broker, port, cacert, certfile, keyfile, keepalive, run_forever) != -1:
+            if Connect(client, broker, port, cacert, certfile, keyfile, device_type, keepalive, run_forever) != -1:
                 if not wait_for(client, "CONNACK"):
                     client.run_flag = False  # break no connack
             else:  # connect fails
@@ -127,7 +127,7 @@ def client_loop(client, broker, port, cacert, certfile, keyfile, deviceid, loop_
         client.loop(0.01)
 
         if client.connected_flag and loop_function:  # function to call
-            loop_function(client, deviceid, loop_delay)  # call function
+            loop_function(client, deviceid, loop_delay)  # call function ,ie pub
 
     time.sleep(1)
     print("disconnecting from", broker)
@@ -152,10 +152,11 @@ def on_connect(client, userdata, flags, rc):
         for c in clients:
             #print("connected ok")
             if client == c["client"]:
-                if c["sub_topic"] != "":
-                    client.subscribe(c["sub_topic"])
+                if c["type"] != "":
+                    sub_topic = "demo/"+groupid+"/"+c["type"]
+                    client.subscribe(sub_topic)
 
-                    print("connected OK",c["name"],c["deviceid"],c["client_id"],c["sub_topic"])
+                    print("connected OK",c["name"],c["deviceid"],c["client_id"],"type is", c["type"], "subscribe to", sub_topic)
     else:
         print("Bad connection Returned code=", rc)
         client.loop_stop()
@@ -174,7 +175,7 @@ def on_publish(client, userdata, mid):
 def pub(client, deviceid, loop_delay):
     if deviceid == "0001":
         print("0001 device matched, you can put function here")
-        pub_topic = "demo/"+groupid+deviceid
+        pub_topic = "demo/"+groupid+"/"+deviceid
     
     if deviceid == "0002":
         print("0002 device matched, you can put function here")
@@ -220,12 +221,13 @@ def Create_connections():
         certfile = clients[i]["certfile"]
         keyfile = clients[i]["keyfile"]
         deviceid = clients[i]["deviceid"]
+        device_type = clients[i]["type"]
         #token = clients[i]["token"]
         client.on_connect = on_connect
         client.on_disconnect = on_disconnect
         client.on_publish = on_publish
         #client.on_message = on_message
-        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, deviceid, pub, 300))
+        t = threading.Thread(target=client_loop, args=(client, broker, port, cacert, certfile, keyfile, deviceid, device_type, pub, 300))
         threads.append(t)
         t.start()
 
@@ -250,8 +252,8 @@ if __name__ == '__main__':
     #index start from 0
     clients = []
     for device in my_devices:
-    #    device_info = {"broker": broker, "port": 1883, "name": device["name"], "deviceid": device["deviceid"], "sub_topic": device["sub_topic"]}
-        device_info = {"broker": broker, "port": 8883, "cacert": cacert, "certfile": certfile, "keyfile": keyfile, "name": device["name"], "deviceid": device["deviceid"], "sub_topic": device["sub_topic"]}
+    #    device_info = {"broker": broker, "port": 1883, "name": device["name"], "deviceid": device["deviceid"], "type": device["type"]}
+        device_info = {"broker": broker, "port": 8883, "cacert": cacert, "certfile": certfile, "keyfile": keyfile, "name": device["name"], "deviceid": device["deviceid"], "type": device["type"]}
         clients.append(device_info)
 
     n_clients = len(clients)
