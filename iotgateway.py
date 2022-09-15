@@ -4,7 +4,7 @@ import time
 import threading
 import ssl
 import logging
-#import thingsboard_objects as Things
+import func_timeout
 import random
 import datetime
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +28,12 @@ MY_BROKER = "52.80.119.72"
 #define end device that will managed by gateway
 my_devices = [{"name": "deivce1", "deviceid": "0001", "type": "type1"},{"name": "deivce2", "deviceid": "0002", "type": "type2"}]
   
+
+
+@func_timeout.func_set_timeout(5)
+def askMQTTPlatform():
+    return input("What MQTT broker platform are you working with (awsiot/mosquitto)? ")
+
 
 init_time = time.time()
 
@@ -238,8 +244,12 @@ def Create_connections():
 
 if __name__ == '__main__':
 
-    things_location = input("What MQTT broker platform are you working with (awsiot/mosquitto)? ")
-
+    try:
+        things_location = askMQTTPlatform()
+    except func_timeout.exceptions.FunctionTimedOut as e:
+        things_location = 'mosquitto'
+    #things_location = input("What MQTT broker platform are you working with (awsiot/mosquitto)? ")
+    print("you've choose to use: %s", things_location)
     if things_location == "awsiot":
         #type_install = 'thingboard.demo:8080'
         broker = AWS_ENDPOINT
